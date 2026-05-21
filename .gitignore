@@ -1,0 +1,55 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.Python
+
+# ── Virtualenv ────────────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Variabili d'ambiente — MAI committare .env con dati reali ────────────────
+.env
+.env.local
+.env.*.local
+# .env.example è OK committarlo (non ha dati reali)
+# .env.test è OK committarlo (usa credenziali di test generiche)
+
+# ── Database e dati ───────────────────────────────────────────────────────────
+*.db
+*.sqlite3
+
+# ── Test e coverage ───────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+
+# ── VS Code ───────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.vscode/launch.json
+# .vscode/extensions.json è OK committarlo (suggerisce estensioni al team)
+
+# ── Sistema operativo ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Build e distribuzione ─────────────────────────────────────────────────────
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# ── Alembic ───────────────────────────────────────────────────────────────────
+# Le versioni di migrazione SI committano — sono parte del codice
+# alembic/versions/  ← NON ignorare
+
+# ── Log ───────────────────────────────────────────────────────────────────────
+*.log
+logs/

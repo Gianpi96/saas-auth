@@ -1,0 +1,162 @@
+# .github/workflows/test.yml
+# ────────────────────────────
+# CI Pipeline: esegue tutti i test ad ogni push e pull request.
+#
+# Struttura:
+#   job "unit"        → test unitari (no DB, veloci, ~30s)
+#   job "integration" → test di integrazione con PostgreSQL reale (~2-3 min)
+#
+# I job girano in parallelo per feedback rapido.
+
+name: SaaS Auth — Test Suite
+
+on:
+  push:
+    branches: [main, develop, "feature/**"]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  PYTHON_VERSION: "3.12"   # usa 3.12 in CI (più stabile di 3.14 per le wheel)
+  POSTGRES_DB: saas_auth_test
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+
+jobs:
+  # ── Job 1: Test Unitari ──────────────────────────────────────────────────────
+  unit:
+    name: "Test Unitari (no DB)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout codice
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Installa dipendenze
+        run: pip install -r requirements.txt
+
+      - name: Crea .env per i test unitari
+        run: |
+          cat > .env << 'ENVEOF'
+          DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/saas_auth_test
+          SYNC_DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/saas_auth_test
+          JWT_SECRET_KEY=ci-test-secret-key-non-usare-in-produzione-mai
+          JWT_ACCESS_TOKEN_EXPIRE_MINUTES=15
+          JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+          GROQ_API_KEY=test-not-used-in-unit-tests
+          DEBUG=false
+          ENVEOF
+
+      - name: Esegui test unitari
+        run: |
+          pytest tests/test_jwt_rbac.py \
+                 tests/test_step2_tenant_isolation.py \
+                 tests/test_step3_refresh_tokens.py \
+                 tests/test_step4_rbac.py \
+                 -v --tb=short --no-header \
+                 -m "not integration"
+
+  # ── Job 2: Test di Integrazione ───────────────────────────────────────────────
+  integration:
+    name: "Test Integrazione (PostgreSQL)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Servizio PostgreSQL come container Docker sidecar
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        # Health check: aspetta che PostgreSQL sia pronto prima di procedere
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout codice
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Installa dipendenze
+        run: pip install -r requirements.txt
+
+      - name: Crea .env per i test di integrazione
+        run: |
+          cat > .env << 'ENVEOF'
+          DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/saas_auth_test
+          SYNC_DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/saas_auth_test
+          JWT_SECRET_KEY=ci-integration-secret-key-non-usare-in-produzione-mai!!
+          JWT_ACCESS_TOKEN_EXPIRE_MINUTES=15
+          JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+          GROQ_API_KEY=test-groq-key-not-real-ci-bypass
+          DEBUG=false
+          ENVEOF
+
+      - name: Attendi PostgreSQL (extra safety)
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -U postgres && break
+            echo "Attendo PostgreSQL... ($i/30)"
+            sleep 2
+          done
+
+      - name: Crea database di test
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres \
+            -c "CREATE DATABASE saas_auth_test;" || true
+
+      - name: Esegui test di integrazione
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/saas_auth_test
+        run: |
+          pytest tests/test_integration.py \
+                 -v --tb=long --no-header \
+                 --asyncio-mode=auto
+
+      - name: Esegui TUTTI i test (unit + integration)
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/saas_auth_test
+        run: |
+          pytest tests/ \
+                 -v --tb=short --no-header \
+                 --asyncio-mode=auto \
+                 --ignore=tests/test_integration.py  # già eseguiti sopra
+
+  # ── Job 3: Linting (opzionale ma raccomandato) ────────────────────────────────
+  lint:
+    name: "Linting & Type Check"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Installa strumenti di linting
+        run: pip install ruff
+
+      - name: Ruff — linting e format check
+        run: |
+          ruff check app/ tests/ --select=E,W,F --ignore=E501

@@ -1,0 +1,303 @@
+### ============================================================
+### SaaS Auth API — Test manuale con REST Client (VS Code)
+### Estensione richiesta: "REST Client" di Huachao Mao
+### ============================================================
+### Come usare:
+###   1. Installa l'estensione "REST Client" in VS Code
+###   2. Apri questo file
+###   3. Clicca "Send Request" sopra ogni blocco ###
+### ============================================================
+
+@base_url = http://localhost:8000
+@tenant_slug = acme-corp
+
+### ─── 0. Health Check ──────────────────────────────────────────
+GET {{base_url}}/health
+
+
+### ─── 1. Crea Tenant ────────────────────────────────────────────
+# Crea il tenant "Acme Corp" con schema PostgreSQL isolato "tenant_acme_corp"
+POST {{base_url}}/api/v1/tenants/
+Content-Type: application/json
+
+{
+  "name": "Acme Corp",
+  "slug": "acme-corp"
+}
+
+
+### ─── 2. Crea secondo Tenant ────────────────────────────────────
+# Dimostra che due tenant sono completamente isolati
+POST {{base_url}}/api/v1/tenants/
+Content-Type: application/json
+
+{
+  "name": "Beta Industries",
+  "slug": "beta-industries"
+}
+
+
+### ─── 3. Recupera Tenant per slug ──────────────────────────────
+GET {{base_url}}/api/v1/tenants/acme-corp
+
+
+### ─── 4. Registra utente Admin (Acme) ───────────────────────────
+# Prima occorre trovare l'id del ruolo admin creato in automatico.
+# Per ora registriamo senza ruolo, poi lo assegniamo.
+POST {{base_url}}/api/v1/auth/register
+Content-Type: application/json
+X-Tenant-Slug: {{tenant_slug}}
+
+{
+  "email": "admin@acme.com",
+  "password": "Admin1234!",
+  "full_name": "Mario Rossi"
+}
+
+
+### ─── 5. Registra utente viewer (Acme) ──────────────────────────
+POST {{base_url}}/api/v1/auth/register
+Content-Type: application/json
+X-Tenant-Slug: {{tenant_slug}}
+
+{
+  "email": "viewer@acme.com",
+  "password": "Viewer1234!",
+  "full_name": "Luigi Verdi"
+}
+
+
+### ─── 6. Login Admin ────────────────────────────────────────────
+# Copia il token dalla risposta e incollalo in @admin_token qui sotto
+POST {{base_url}}/api/v1/auth/login
+Content-Type: application/json
+X-Tenant-Slug: {{tenant_slug}}
+
+{
+  "email": "admin@acme.com",
+  "password": "Admin1234!"
+}
+
+
+### ─── IMPOSTA QUESTO TOKEN DOPO IL LOGIN ────────────────────────
+@admin_token = INCOLLA_QUI_IL_TOKEN_JWT
+
+
+### ─── 7. Chi sono io? (decodifica JWT) ──────────────────────────
+GET {{base_url}}/api/v1/auth/me
+Authorization: Bearer {{admin_token}}
+
+
+### ─── 8. Lista ruoli del tenant ─────────────────────────────────
+# Mostra i ruoli di sistema (admin, viewer) creati automaticamente
+GET {{base_url}}/api/v1/roles/
+Authorization: Bearer {{admin_token}}
+
+
+### ─── 9. Crea ruolo custom "editor" ────────────────────────────
+# Groq genera automaticamente una descrizione in italiano!
+POST {{base_url}}/api/v1/roles/
+Content-Type: application/json
+Authorization: Bearer {{admin_token}}
+
+{
+  "name": "editor",
+  "description": "Può creare e modificare documenti e report",
+  "permissions": "read:documents,write:documents,read:reports"
+}
+
+
+### ─── IMPOSTA L'ID DEL RUOLO EDITOR ────────────────────────────
+@editor_role_id = INCOLLA_QUI_L_ID_DEL_RUOLO_EDITOR
+
+
+### ─── 10. Crea policy per il ruolo editor ───────────────────────
+# Groq genera la descrizione in linguaggio naturale
+POST {{base_url}}/api/v1/roles/{{editor_role_id}}/policies
+Content-Type: application/json
+Authorization: Bearer {{admin_token}}
+
+{
+  "name": "Editor può leggere documenti",
+  "role_id": "{{editor_role_id}}",
+  "resource": "documents",
+  "action": "read",
+  "effect": "allow"
+}
+
+
+### ─── 11. Crea policy write per editor ──────────────────────────
+POST {{base_url}}/api/v1/roles/{{editor_role_id}}/policies
+Content-Type: application/json
+Authorization: Bearer {{admin_token}}
+
+{
+  "name": "Editor può scrivere documenti",
+  "role_id": "{{editor_role_id}}",
+  "resource": "documents",
+  "action": "write",
+  "effect": "allow"
+}
+
+
+### ─── 12. Lista policy del ruolo editor ────────────────────────
+GET {{base_url}}/api/v1/roles/{{editor_role_id}}/policies
+Authorization: Bearer {{admin_token}}
+
+
+### ─── 13. Test ISOLAMENTO TENANT ───────────────────────────────
+# Stesso utente "admin@acme.com" ma nel tenant SBAGLIATO → deve fallire
+POST {{base_url}}/api/v1/auth/login
+Content-Type: application/json
+X-Tenant-Slug: beta-industries
+
+{
+  "email": "admin@acme.com",
+  "password": "Admin1234!"
+}
+
+
+### ─── 14. Registra stesso utente in beta-industries ────────────
+# La stessa email può esistere in tenant diversi (isolamento)
+POST {{base_url}}/api/v1/auth/register
+Content-Type: application/json
+X-Tenant-Slug: beta-industries
+
+{
+  "email": "admin@acme.com",
+  "password": "BetaPass999!",
+  "full_name": "Admin Beta (stesso indirizzo, tenant diverso)"
+}
+
+
+### ─── 15. Login su beta-industries ─────────────────────────────
+POST {{base_url}}/api/v1/auth/login
+Content-Type: application/json
+X-Tenant-Slug: beta-industries
+
+{
+  "email": "admin@acme.com",
+  "password": "BetaPass999!"
+}
+
+
+### ─── 16. Test token scaduto/invalido ──────────────────────────
+GET {{base_url}}/api/v1/auth/me
+Authorization: Bearer token.invalido.sicuramente
+
+
+### ─── 17. Test accesso senza token ─────────────────────────────
+GET {{base_url}}/api/v1/roles/
+
+
+### ══════════════════════════════════════════════════════════════════════════
+### STEP 3 — Refresh Token Rotation & Replay Attack Detection
+### ══════════════════════════════════════════════════════════════════════════
+
+### ─── STEP 3 / 1. Login — ottieni access_token + refresh_token ─────────────
+# Ora la risposta include refresh_token e refresh_expires_in
+POST {{base_url}}/api/v1/auth/login
+Content-Type: application/json
+X-Tenant-Slug: {{tenant_slug}}
+
+{
+  "email": "admin@acme.com",
+  "password": "Admin1234!"
+}
+
+
+### ─── IMPOSTA I TOKEN DOPO IL LOGIN ────────────────────────────────────────
+@access_token = INCOLLA_ACCESS_TOKEN
+@refresh_token = INCOLLA_REFRESH_TOKEN
+
+
+### ─── STEP 3 / 2. Usa l'access token (scade in 15 min) ───────────────────
+GET {{base_url}}/api/v1/auth/me
+Authorization: Bearer {{access_token}}
+
+
+### ─── STEP 3 / 3. Refresh normale — vecchio revocato, nuova coppia emessa ─
+# Invia il refresh_token ottenuto al login.
+# Risposta: nuovi access_token + refresh_token.
+# Il refresh_token presentato è ora REVOCATO nel DB (reason='rotated').
+POST {{base_url}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refresh_token}}"
+}
+
+
+### ─── IMPOSTA I NUOVI TOKEN ────────────────────────────────────────────────
+@new_access_token = INCOLLA_NUOVO_ACCESS_TOKEN
+@new_refresh_token = INCOLLA_NUOVO_REFRESH_TOKEN
+
+
+### ─── STEP 3 / 4. Verifica nuovo access token funziona ──────────────────
+GET {{base_url}}/api/v1/auth/me
+Authorization: Bearer {{new_access_token}}
+
+
+### ─── STEP 3 / 5. REPLAY ATTACK — presenta il vecchio refresh_token ──────
+# Presenta il refresh_token ORIGINALE (già usato nello step 3).
+# Il sistema deve:
+#   1. Trovarlo nel DB con is_revoked=True
+#   2. Rilevare REPLAY ATTACK
+#   3. Invalidare TUTTA la family (anche new_refresh_token diventa inutile)
+#   4. Rispondere 401 con header X-Security-Event: replay-attack-detected
+POST {{base_url}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refresh_token}}"
+}
+
+### Risposta attesa:
+### HTTP 401
+### Header: X-Security-Event: replay-attack-detected
+### Body: {"detail": "REPLAY_ATTACK: ..."}
+
+
+### ─── STEP 3 / 6. Verifica che new_refresh_token sia stato invalidato ─────
+# Dopo il replay attack, ANCHE new_refresh_token è inutilizzabile
+# (tutta la family è stata invalidata).
+# Risposta attesa: 401 TOKEN_NOT_FOUND o REPLAY_ATTACK
+POST {{base_url}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{new_refresh_token}}"
+}
+
+
+### ─── STEP 3 / 7. Deve rifare login per ottenere una nuova sessione ───────
+POST {{base_url}}/api/v1/auth/login
+Content-Type: application/json
+X-Tenant-Slug: {{tenant_slug}}
+
+{
+  "email": "admin@acme.com",
+  "password": "Admin1234!"
+}
+
+
+### ─── STEP 3 / 8. Logout — revoca il refresh token corrente ──────────────
+@fresh_refresh_token = INCOLLA_REFRESH_TOKEN_DOPO_NUOVO_LOGIN
+
+POST {{base_url}}/api/v1/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{new_access_token}}
+
+{
+  "refresh_token": "{{fresh_refresh_token}}"
+}
+
+
+### ─── STEP 3 / 9. Dopo logout il refresh_token non funziona più ──────────
+POST {{base_url}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{fresh_refresh_token}}"
+}
+### Risposta attesa: 401
