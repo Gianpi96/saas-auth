@@ -165,7 +165,7 @@ async def revoke_all_user_tokens(
         update(RefreshToken)
         .where(
             RefreshToken.user_id == user_id,
-            RefreshToken.is_revoked == False,
+            RefreshToken.is_revoked.is_(False),
         )
         .values(is_revoked=True, revoked_reason=reason)
         .returning(RefreshToken.id)
@@ -199,7 +199,7 @@ async def _invalidate_family(
         update(RefreshToken)
         .where(
             RefreshToken.family_id == family_id,
-            RefreshToken.is_revoked == False,
+            RefreshToken.is_revoked.is_(False),
         )
         .values(is_revoked=True, revoked_reason=reason)
         .returning(RefreshToken.id)

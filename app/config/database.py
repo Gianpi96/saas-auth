@@ -69,6 +69,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 # ─────────────────────────────────────────────
 # TENANT SESSION (schema switching sicuro)
 # ─────────────────────────────────────────────
+
 @asynccontextmanager
 async def get_tenant_session(schema: str) -> AsyncGenerator[AsyncSession, None]:
     """

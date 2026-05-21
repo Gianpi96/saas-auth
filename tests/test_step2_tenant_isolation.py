@@ -6,7 +6,7 @@ Questi test NON richiedono il DB: testano la logica pura.
 """
 import uuid
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 
 from app.models.tenant import Tenant, TenantPlan, PLAN_LIMITS
 
@@ -104,7 +104,6 @@ class TestGetCurrentTenant:
     def test_returns_tenant_when_present(self):
         """Se request.state.tenant è impostato, lo restituisce."""
         from app.services.tenant_deps import get_current_tenant
-        from fastapi import HTTPException
 
         tenant = MagicMock(spec=Tenant)
         request = self._make_request_with_tenant(tenant)
@@ -154,13 +153,10 @@ class TestRequirePlan:
     def test_free_plan_allowed_when_free_required(self):
         """Un tenant FREE può accedere a feature che richiedono FREE."""
         from app.services.tenant_deps import require_plan
-        from fastapi import HTTPException
 
         tenant = self._make_tenant_with_plan(TenantPlan.FREE)
-        checker = require_plan(TenantPlan.FREE)
+        require_plan(TenantPlan.FREE)
 
-        # Simuliamo la dependency già risolta (tenant iniettato)
-        result = checker.__wrapped__(tenant) if hasattr(checker, '__wrapped__') else None
         # Test diretto della logica interna
         from app.models.tenant import TenantPlan as TP
         plan_hierarchy = {TP.FREE: 0, TP.PRO: 1, TP.ENTERPRISE: 2}
@@ -253,7 +249,6 @@ class TestCompositeIndexes:
     def test_user_model_has_tenant_id(self):
         """Il modello User deve avere la colonna tenant_id."""
         from app.models.user import User
-        from sqlalchemy import inspect
         cols = {c.key for c in User.__table__.columns}
         assert "tenant_id" in cols
 

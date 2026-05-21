@@ -9,7 +9,6 @@ Aggiunto rispetto allo step 1:
 import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, Enum, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID

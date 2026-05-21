@@ -118,7 +118,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
                     result = await db.execute(
                         select(Tenant).where(
                             Tenant.id == tid,
-                            Tenant.is_active == True,
+                            Tenant.is_active,
                         )
                     )
                 else:
@@ -126,7 +126,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
                     result = await db.execute(
                         select(Tenant).where(
                             Tenant.slug == tenant_slug_header,
-                            Tenant.is_active == True,
+                            Tenant.is_active,
                         )
                     )
 

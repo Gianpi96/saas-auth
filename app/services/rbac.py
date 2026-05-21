@@ -26,7 +26,7 @@ In FastAPI USARE SEMPRE la forma Depends():
 """
 import functools
 import logging
-from typing import Callable, Optional
+from typing import Callable
 
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer

@@ -20,7 +20,6 @@ import uuid
 from typing import Optional
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_tenant_session
 from app.services.groq_service import generate_permission_description

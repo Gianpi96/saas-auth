@@ -18,7 +18,7 @@ Struttura:
 import hashlib
 import uuid
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -344,9 +344,7 @@ class TestReplayAttack:
         # Deve aver invalidato 3 token
         assert count == 3
 
-        # L'UPDATE deve aver usato il family_id corretto
-        call_args = db.execute.call_args
-        # Verifica che la query sia stata eseguita (non possiamo ispezionare SQL facilmente)
+        # Verifica che la query sia stata eseguita
         assert db.execute.called
 
     def test_replay_attack_scenario_explained(self):

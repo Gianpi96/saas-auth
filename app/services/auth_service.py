@@ -5,7 +5,6 @@ Aggiunto: tenant_id viene ora scritto su ogni INSERT utente.
 """
 
 import uuid
-from datetime import datetime, timezone
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +15,6 @@ from app.schemas.user import (
     TokenResponse,
     UserCreate,
     UserRead,
-    RefreshRequest,
 )
 from app.services.jwt_service import create_access_token
 from app.services.password_service import hash_password, verify_password
@@ -309,7 +307,7 @@ async def logout_user(
             .where(
                 RefreshToken.token_hash == token_hash,
                 RefreshToken.user_id == user_id,
-                RefreshToken.is_revoked == False,
+                RefreshToken.is_revoked.is_(False),
             )
             .values(is_revoked=True, revoked_reason="logout")
         )

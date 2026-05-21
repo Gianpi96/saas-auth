@@ -73,8 +73,7 @@ _db_module.AsyncSessionLocal = _test_session_factory
 
 # Import DOPO aver settato le env vars e patchato il database module
 from app.main import app  # noqa: E402
-from app.config.database import Base, get_db, AsyncSessionLocal  # noqa: E402
-from app.config.settings import get_settings  # noqa: E402
+from app.config.database import Base  # noqa: E402
 
 
 # ── Event Loop ────────────────────────────────────────────────────────────────

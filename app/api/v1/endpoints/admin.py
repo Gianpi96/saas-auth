@@ -16,7 +16,6 @@ Decorator require_permission in azione:
   Gli admin hanno il permesso wildcard "*" quindi passano sempre.
 """
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -35,7 +34,7 @@ from app.services.permission_service import (
     get_role_with_permissions,
     revoke_permission_from_role,
 )
-from app.services.rbac import get_current_user, require_permission, require_role
+from app.services.rbac import require_permission, require_role
 from app.services.groq_service import generate_role_description
 from app.config.database import get_tenant_session
 from sqlalchemy import text
@@ -298,7 +297,6 @@ async def list_permissions(
 def _map_role_with_permissions(role_data: dict) -> RoleWithPermissions:
     """Converte il dict dal DB nello schema RoleWithPermissions."""
     from app.schemas.user import RolePermissionRead
-    from datetime import datetime
 
     permissions = [
         RolePermissionRead(

@@ -14,7 +14,6 @@ I test sono ordinati per dipendenza logica, ma pytest li esegue indipendentement
 """
 import uuid
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 
 import jwt as pyjwt
@@ -303,7 +302,7 @@ class TestLogin:
         Dopo il login, il refresh token deve essere salvato nel DB
         con is_revoked=False e family_id valorizzato.
         """
-        from sqlalchemy import text, select
+        from sqlalchemy import select
         from app.models.refresh_token import RefreshToken
 
         resp = await client.post(
@@ -319,7 +318,7 @@ class TestLogin:
         result = await db_session.execute(
             select(RefreshToken).where(
                 RefreshToken.user_id == user_id,
-                RefreshToken.is_revoked == False,
+                RefreshToken.is_revoked.is_(False),
             )
         )
         tokens = result.scalars().all()
@@ -534,7 +533,7 @@ class TestRefreshRotation:
         result = await db_session.execute(
             select(RefreshToken).where(
                 RefreshToken.user_id == user_id,
-                RefreshToken.is_revoked == False,
+                RefreshToken.is_revoked.is_(False),
             )
         )
         active_tokens = result.scalars().all()

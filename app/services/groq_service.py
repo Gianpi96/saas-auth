@@ -5,8 +5,8 @@ Integrazione con Groq API per generare descrizioni in linguaggio naturale.
 
 Caso d'uso principale:
   - L'admin crea una policy tecnica (role=editor, resource=documents, action=write)
-  - Groq genera una spiegazione comprensibile: 
-    "Gli utenti con ruolo Editor possono creare e modificare documenti, 
+  - Groq genera una spiegazione comprensibile:
+    "Gli utenti con ruolo Editor possono creare e modificare documenti,
      ma non eliminarli o gestire altri utenti."
 
 Perché Groq?

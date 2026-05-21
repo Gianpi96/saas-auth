@@ -162,7 +162,7 @@ async def create_tenant(db: AsyncSession, data: TenantCreate) -> Tenant:
 
 async def get_tenant_by_slug(db: AsyncSession, slug: str) -> Tenant | None:
     result = await db.execute(
-        select(Tenant).where(Tenant.slug == slug, Tenant.is_active == True)
+        select(Tenant).where(Tenant.slug == slug, Tenant.is_active)
     )
     return result.scalar_one_or_none()
 
@@ -176,7 +176,7 @@ async def get_tenant_by_id(db: AsyncSession, tenant_id: uuid.UUID) -> Tenant | N
 
 async def get_tenant_by_subdomain(db: AsyncSession, subdomain: str) -> Tenant | None:
     result = await db.execute(
-        select(Tenant).where(Tenant.subdomain == subdomain, Tenant.is_active == True)
+        select(Tenant).where(Tenant.subdomain == subdomain, Tenant.is_active)
     )
     return result.scalar_one_or_none()
 
