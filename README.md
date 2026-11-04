@@ -1,5 +1,8 @@
 # SaaS Auth — Backend FastAPI Multi-Tenant
 
+**English summary:** multi-tenant FastAPI backend. Each tenant gets its own PostgreSQL schema; users authenticate with JWT tokens that carry tenant, role and permissions. Includes role and policy management (with AI-generated role descriptions via Groq).
+**Stack:** FastAPI, PostgreSQL (async SQLAlchemy), Alembic, JWT, pytest. *Setup guide below is in Italian.*
+
 ## Folder Structure
 
 ```
@@ -250,7 +253,7 @@ Risposta: il campo `ai_description` conterrà testo generato da Groq, tipo:
 
 **Perché `tenant_schema` nel JWT?**
 Ogni request autenticata sa immediatamente su quale schema PostgreSQL operare,
-senza fare query aggiuntive al DB. Zero overhead per la risoluzione del tenant.
+senza fare query aggiuntive al DB per risolvere il tenant. Il compromesso: il token è un po' più grande e i dati del tenant nel token restano validi fino alla scadenza (15 minuti per l'access token).
 
 ---
 
